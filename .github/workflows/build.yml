@@ -156,18 +156,22 @@ jobs:
     name: build-${{ matrix.rid }}
     if: >-
       github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - rid: linux-arm
-            arch: arm
-            gcc: arm-linux-gnueabihf
+          - arch: arm
+            os: ubuntu-latest
+            rid: linux-arm
 
-          - rid: linux-x64
-            arch: x64
-            gcc: gcc
+          - arch: arm64
+            os: ubuntu-24.04-arm
+            rid: linux-arm64
+
+          - arch: x64
+            os: ubuntu-latest
+            rid: linux-x64
 
     steps:
       - name: Checkout
@@ -183,14 +187,14 @@ jobs:
       - name: Run uname
         run: uname -m
 
-      - name: Install gcc ${{ matrix.arch }} toolchain
+      - name: Install gcc toolchain
         if: ${{ matrix.arch == 'arm' }}
         run: |
           sudo apt-get update
-          sudo apt-get install gcc-${{ matrix.gcc }}
-          sudo apt-get install g++-${{ matrix.gcc }}
-          echo "ARM_C_COMPILER=${{ matrix.gcc }}-gcc" >> $GITHUB_ENV
-          echo "ARM_CXX_COMPILER=${{ matrix.gcc }}-g++" >> $GITHUB_ENV
+          sudo apt-get install gcc-arm-linux-gnueabihf
+          sudo apt-get install g++-arm-linux-gnueabihf
+          echo "ARM_C_COMPILER=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
+          echo "ARM_CXX_COMPILER=arm-linux-gnueabihf-g++" >> $GITHUB_ENV
 
       - name: Configure
         run: >
@@ -198,8 +202,8 @@ jobs:
           -S liblsl
           -B build
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
-          ${{ matrix.arch == 'x64' && '-DCMAKE_C_COMPILER=gcc' || '-DCMAKE_C_COMPILER=$ARM_C_COMPILER' }}
-          ${{ matrix.arch == 'x64' && '-DCMAKE_CXX_COMPILER=g++' || '-DCMAKE_CXX_COMPILER=$ARM_CXX_COMPILER' }}
+          ${{ matrix.arch == 'arm' && '-DCMAKE_C_COMPILER=$ARM_C_COMPILER' || '' }}
+          ${{ matrix.arch == 'arm' && '-DCMAKE_CXX_COMPILER=$ARM_CXX_COMPILER' || '' }}
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }}
           -DLSL_BUILD_STATIC=OFF
 
@@ -211,6 +215,10 @@ jobs:
 
       - name: Run file command
         run: file ./${{ env.INSTALL_PREFIX }}/lib/*
+
+      - name: Run ldd command
+        if: ${{ matrix.arch != 'arm' }}
+        run: ldd ./${{ env.INSTALL_PREFIX }}/lib/liblsl.so
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -218,66 +226,22 @@ jobs:
           name: liblsl-${{ env.LIBLSL_VERSION }}-${{ matrix.rid }}
           path: ${{ env.INSTALL_PREFIX }}
 
-  build-linux-arm64:
-    name: build-linux-arm64
-    if: >-
-      github.event.pull_request.draft == false
-    runs-on: ubuntu-24.04-arm
-    strategy:
-      fail-fast: false
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Clone liblsl
-        run: |
-          git clone https://github.com/sccn/liblsl.git
-          pushd liblsl
-          git checkout ${{ env.LIBLSL_VERSION }}
-          popd
-
-      - name: Run uname
-        run: uname -m
-
-      - name: Configure
-        run: >
-          cmake
-          -S liblsl
-          -B build
-          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
-          -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }}
-          -DLSL_BUILD_STATIC=OFF
-
-      - name: Build & Install
-        run: |
-          pushd build
-          make install
-          popd
-
-      - name: Run file command
-        run: file ./${{ env.INSTALL_PREFIX }}/lib/*
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: liblsl-${{ env.LIBLSL_VERSION }}-linux-arm64
-          path: ${{ env.INSTALL_PREFIX }}
-
   build-linux-musl:
     name: build-${{ matrix.rid }}
     if: >-
       github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - rid: linux-musl-arm64
-            arch: arm64
+          - arch: arm64
+            os: ubuntu-24.04-arm
+            rid: linux-musl-arm64
 
-          - rid: linux-musl-x64
-            arch: x64
+          - arch: x64
+            os: ubuntu-latest
+            rid: linux-musl-x64
 
     steps:
       - name: Checkout
@@ -289,10 +253,6 @@ jobs:
           pushd liblsl
           git checkout ${{ env.LIBLSL_VERSION }}
           popd
-
-      - name: Set up QEMU
-        if: ${{ matrix.arch == 'arm64' }}
-        uses: docker/setup-qemu-action@v4
 
       - name: Pull Alpine image
         run: |
@@ -324,8 +284,13 @@ jobs:
                 -DLSL_OPTIMIZATIONS=OFF
               cd build
               make install
-              cd ..
             "
+
+      - name: Run file command
+        run: file ./${{ env.INSTALL_PREFIX }}/lib/*
+
+      - name: Run ldd command
+        run: ldd ./${{ env.INSTALL_PREFIX }}/lib/liblsl.so
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -422,7 +387,6 @@ jobs:
       - build-android
       - build-apple
       - build-linux
-      - build-linux-arm64
       - build-linux-musl
       - build-windows
     permissions:
