@@ -60,6 +60,7 @@ jobs:
           cmake
           -S liblsl
           -B build
+          -G Ninja
           -DCMAKE_SYSTEM_NAME=Android
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake
           -DANDROID_ABI=${{ matrix.abi }}
@@ -70,9 +71,7 @@ jobs:
 
       - name: Build & Install
         run: |
-          pushd build
-          make install
-          popd
+          cmake --build build --target install
 
       - name: Run file command
         run: file ./${{ env.INSTALL_PREFIX }}/lib/*
@@ -131,6 +130,7 @@ jobs:
           cmake
           -S liblsl
           -B build
+          -G Ninja
           -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/liblsl/cmake/ios.toolchain.cmake
           -DPLATFORM=${{ matrix.os }}
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
@@ -201,6 +201,7 @@ jobs:
           cmake
           -S liblsl
           -B build
+          -G Ninja
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
           ${{ matrix.arch == 'arm' && '-DCMAKE_C_COMPILER=$ARM_C_COMPILER' || '' }}
           ${{ matrix.arch == 'arm' && '-DCMAKE_CXX_COMPILER=$ARM_CXX_COMPILER' || '' }}
@@ -209,9 +210,7 @@ jobs:
 
       - name: Build & Install
         run: |
-          pushd build
-          make install
-          popd
+          cmake --build build --target install
 
       - name: Run file command
         run: file ./${{ env.INSTALL_PREFIX }}/lib/*
@@ -274,7 +273,8 @@ jobs:
               apk add --no-cache \
                 build-base \
                 cmake \
-                linux-headers
+                linux-headers \
+                ninja
               cmake \
                 -S liblsl \
                 -B build \
@@ -282,8 +282,7 @@ jobs:
                 -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} \
                 -DLSL_BUILD_STATIC=OFF \
                 -DLSL_OPTIMIZATIONS=OFF
-              cd build
-              make install
+              cmake --build build --target install
             "
 
       - name: Run file command
