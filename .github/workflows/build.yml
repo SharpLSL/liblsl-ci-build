@@ -53,6 +53,13 @@ jobs:
           git checkout ${{ env.LIBLSL_VERSION }}
           popd
 
+      - name: Patch
+        run: |
+          pushd liblsl
+          git apply ${{ github.workspace }}/loguru.patch
+          git diff
+          popd
+
       - name: Run uname
         run: uname -m
 
@@ -254,6 +261,13 @@ jobs:
           git checkout ${{ env.LIBLSL_VERSION }}
           popd
 
+      - name: Patch
+        run: |
+          pushd liblsl
+          git apply ${{ github.workspace }}/loguru.patch
+          git diff
+          popd
+
       - name: Pull Alpine image
         run: |
           if [ "${{ matrix.arch }}" = "arm64" ]; then
@@ -334,6 +348,7 @@ jobs:
       - name: Patch
         run: |
           pushd liblsl
+          git apply ${{ github.workspace }}/loguru.patch
           git apply ${{ github.workspace }}/msvc_pdb.patch
           git diff
           popd
