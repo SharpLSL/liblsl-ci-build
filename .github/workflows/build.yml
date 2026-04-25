@@ -274,6 +274,7 @@ jobs:
               apk add --no-cache \
                 build-base \
                 cmake \
+                git \
                 linux-headers \
                 ninja
               cmake \
