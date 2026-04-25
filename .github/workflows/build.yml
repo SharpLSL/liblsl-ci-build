@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 env:
-  LIBLSL_VERSION: v1.17.5
+  LIBLSL_VERSION: v1.17.6
   BUILD_TYPE: Release
   INSTALL_PREFIX: install
 
@@ -273,6 +273,7 @@ jobs:
               apk add --no-cache \
                 build-base \
                 cmake \
+                git \
                 linux-headers \
                 ninja
               cmake \
