@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 env:
-  LIBLSL_VERSION: v1.17.5
+  LIBLSL_VERSION: v1.17.6
   BUILD_TYPE: Debug
   INSTALL_PREFIX: install
 
