@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - test-legacy-abi
   pull_request:
     types: [ opened, ready_for_review, reopened, synchronize ]
   release:
@@ -49,7 +50,6 @@ jobs:
         run: |
           git clone https://github.com/sccn/liblsl.git
           pushd liblsl
-          git checkout ${{ env.LIBLSL_VERSION }}
           popd
 
       - name: Run uname
@@ -68,6 +68,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }}
           -DLSL_BUILD_STATIC=OFF
+          -DLSL_LEGACY_CPP_ABI=ON
 
       - name: Build & Install
         run: |
@@ -119,7 +120,6 @@ jobs:
         run: |
           git clone https://github.com/sccn/liblsl.git
           pushd liblsl
-          git checkout ${{ env.LIBLSL_VERSION }}
           popd
 
       - name: Run uname
@@ -138,6 +138,7 @@ jobs:
           -DCMAKE_MACOSX_BUNDLE=OFF
           -DLSL_BUILD_STATIC=OFF
           -DLSL_FRAMEWORK=OFF
+          -DLSL_LEGACY_CPP_ABI=ON
 
       - name: Build & Install
         run: |
@@ -181,7 +182,6 @@ jobs:
         run: |
           git clone https://github.com/sccn/liblsl.git
           pushd liblsl
-          git checkout ${{ env.LIBLSL_VERSION }}
           popd
 
       - name: Run uname
@@ -207,6 +207,7 @@ jobs:
           ${{ matrix.arch == 'arm' && '-DCMAKE_CXX_COMPILER=$ARM_CXX_COMPILER' || '' }}
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }}
           -DLSL_BUILD_STATIC=OFF
+          -DLSL_LEGACY_CPP_ABI=ON
 
       - name: Build & Install
         run: |
@@ -241,7 +242,6 @@ jobs:
         run: |
           git clone https://github.com/sccn/liblsl.git
           pushd liblsl
-          git checkout ${{ env.LIBLSL_VERSION }}
           popd
 
       - name: Patch
@@ -292,6 +292,7 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }}
           -DLSL_BUILD_STATIC=OFF
           -DLSL_OPTIMIZATIONS=OFF
+          -DLSL_LEGACY_CPP_ABI=ON
 
       - name: Build & Install
         run: |
@@ -328,7 +329,6 @@ jobs:
         run: |
           git clone https://github.com/sccn/liblsl.git
           pushd liblsl
-          git checkout ${{ env.LIBLSL_VERSION }}
           popd
 
       - name: Pull Alpine image
@@ -360,7 +360,8 @@ jobs:
                 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
                 -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} \
                 -DLSL_BUILD_STATIC=OFF \
-                -DLSL_OPTIMIZATIONS=OFF
+                -DLSL_OPTIMIZATIONS=OFF \
+                -DLSL_LEGACY_CPP_ABI=ON
               cmake --build build --target install
             "
 
@@ -423,7 +424,6 @@ jobs:
         run: |
           git clone https://github.com/sccn/liblsl.git
           pushd liblsl
-          git checkout ${{ env.LIBLSL_VERSION }}
           popd
 
       - name: Patch
@@ -446,6 +446,7 @@ jobs:
           -DLSL_BUILD_STATIC=OFF
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }}
           ${{ matrix.crt == 'MT' && '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>' || '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>DLL' }}
+          -DLSL_LEGACY_CPP_ABI=ON
 
       - name: Build & Install
         run: |
