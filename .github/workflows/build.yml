@@ -50,6 +50,7 @@ jobs:
         run: |
           git clone https://github.com/sccn/liblsl.git
           pushd liblsl
+          git apply ${{ github.workspace }}/add-missing-include.patch
           popd
 
       - name: Run uname
@@ -120,6 +121,7 @@ jobs:
         run: |
           git clone https://github.com/sccn/liblsl.git
           pushd liblsl
+          git apply ${{ github.workspace }}/add-missing-include.patch
           popd
 
       - name: Run uname
@@ -182,6 +184,7 @@ jobs:
         run: |
           git clone https://github.com/sccn/liblsl.git
           pushd liblsl
+          git apply ${{ github.workspace }}/add-missing-include.patch
           popd
 
       - name: Run uname
@@ -248,6 +251,7 @@ jobs:
         run: |
           pushd liblsl
           git apply ${{ github.workspace }}/fix_lslver_linkage.patch
+          git apply ${{ github.workspace }}/add-missing-include.patch
           git diff
           popd
 
@@ -329,6 +333,7 @@ jobs:
         run: |
           git clone https://github.com/sccn/liblsl.git
           pushd liblsl
+          git apply ${{ github.workspace }}/add-missing-include.patch
           popd
 
       - name: Pull Alpine image
@@ -430,6 +435,7 @@ jobs:
         run: |
           pushd liblsl
           git apply ${{ github.workspace }}/msvc_pdb.patch
+          git apply ${{ github.workspace }}/add-missing-include.patch
           git diff
           popd
 
