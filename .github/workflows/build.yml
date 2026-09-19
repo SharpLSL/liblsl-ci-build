@@ -68,6 +68,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }}
           -DLSL_BUILD_STATIC=OFF
+          -DLSL_TOOLS=ON
 
       - name: Build & Install
         run: |
@@ -138,6 +139,7 @@ jobs:
           -DCMAKE_MACOSX_BUNDLE=OFF
           -DLSL_BUILD_STATIC=OFF
           -DLSL_FRAMEWORK=OFF
+          -DLSL_TOOLS=ON
 
       - name: Build & Install
         run: |
@@ -207,6 +209,7 @@ jobs:
           ${{ matrix.arch == 'arm' && '-DCMAKE_CXX_COMPILER=$ARM_CXX_COMPILER' || '' }}
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }}
           -DLSL_BUILD_STATIC=OFF
+          -DLSL_TOOLS=ON
 
       - name: Build & Install
         run: |
@@ -292,6 +295,7 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }}
           -DLSL_BUILD_STATIC=OFF
           -DLSL_OPTIMIZATIONS=OFF
+          -DLSL_TOOLS=ON
 
       - name: Build & Install
         run: |
@@ -360,7 +364,8 @@ jobs:
                 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
                 -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} \
                 -DLSL_BUILD_STATIC=OFF \
-                -DLSL_OPTIMIZATIONS=OFF
+                -DLSL_OPTIMIZATIONS=OFF \
+                -DLSL_TOOLS=ON
               cmake --build build --target install
             "
 
