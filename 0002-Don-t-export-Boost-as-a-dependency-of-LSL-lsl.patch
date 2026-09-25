@@ -1,7 +1,7 @@
 From a16e9e4a68ed532e4d1fd8e4310eb12243fd209c Mon Sep 17 00:00:00 2001
 From: myd7349 <myd7349@gmail.com>
 Date: Mon, 21 Sep 2026 23:26:48 +0800
-Subject: [PATCH 2/2] Don't export Boost as a dependency of LSL::lsl
+Subject: [PATCH 2/3] Don't export Boost as a dependency of LSL::lsl
 
 Boost is only ever a header-only, PRIVATE compile-time dependency of
 lslobj (via the lslboost interface target), whether bundled or system-

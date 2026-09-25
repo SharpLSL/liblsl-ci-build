@@ -24,7 +24,7 @@ permissions:
 env:
   BUILD_TYPE: Release
   INSTALL_PREFIX: install
-  LIBLSL_VERSION: dev
+  LIBLSL_VERSION: v1.18.0.b5
 
 jobs:
   build-matrix:
@@ -63,7 +63,8 @@ jobs:
           cd liblsl
           git apply \
             "${GITHUB_WORKSPACE}/0001-Fix-transitive-dependencies-for-static-LSL-lsl.patch" \
-            "${GITHUB_WORKSPACE}/0002-Don-t-export-Boost-as-a-dependency-of-LSL-lsl.patch"
+            "${GITHUB_WORKSPACE}/0002-Don-t-export-Boost-as-a-dependency-of-LSL-lsl.patch" \
+            "${GITHUB_WORKSPACE}/0003-Fix-pugixml-header-not-found-error.patch"
 
       - name: Install dependencies on Linux
         if: runner.os == 'Linux' && matrix.bundled_boost == 'OFF'
