@@ -149,7 +149,7 @@ jobs:
 
       - name: Build lslver
         shell: bash
-        run: cmake --build lslver-build --config ${BUILD_TYPE}
+        run: cmake --build lslver-build --config ${BUILD_TYPE} -v
 
       - name: Copy vcpkg pugixml DLL
         if: runner.os == 'Windows' && matrix.linkage == 'shared' && matrix.fetch_pugixml == 'OFF'
