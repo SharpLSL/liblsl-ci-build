@@ -1,0 +1,114 @@
+From b34a45ffad4ff1f5b7d2f8281a93168e098d3126 Mon Sep 17 00:00:00 2001
+From: myd7349 <myd7349@gmail.com>
+Date: Sat, 26 Sep 2026 00:11:55 +0800
+Subject: [PATCH 4/4] Fix for fetched pugixml dependency
+
+---
+ cmake/Dependencies.cmake | 24 +++++++++---------------
+ cmake/TargetLib.cmake    | 14 +++++++++-----
+ cmake/TargetObjLib.cmake | 16 +++++++---------
+ 3 files changed, 25 insertions(+), 29 deletions(-)
+
+diff --git a/cmake/Dependencies.cmake b/cmake/Dependencies.cmake
+index 42a0fc9f..601adb67 100644
+--- a/cmake/Dependencies.cmake
++++ b/cmake/Dependencies.cmake
+@@ -9,28 +9,20 @@ include(cmake/GitVersion.cmake)
+ if(LSL_FETCH_PUGIXML)
+     message(STATUS "Fetching pugixml via FetchContent")
+     include(FetchContent)
+-    set(PUGIXML_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+-    set(PUGIXML_NO_EXCEPTIONS OFF CACHE BOOL "" FORCE)
+-    set(PUGIXML_INSTALL OFF CACHE BOOL "" FORCE)
+-    # Force static library even if parent project sets BUILD_SHARED_LIBS
+-    set(PUGIXML_BUILD_SHARED_AND_STATIC_LIBS OFF CACHE BOOL "" FORCE)
+-    set(_lsl_saved_build_shared_libs ${BUILD_SHARED_LIBS})
+-    set(BUILD_SHARED_LIBS OFF)
+     FetchContent_Declare(
+         pugixml
+         GIT_REPOSITORY https://github.com/zeux/pugixml.git
+         GIT_TAG v1.15
+         GIT_SHALLOW TRUE
+-        EXCLUDE_FROM_ALL
++        # Don't add_subdirectory() pugixml's own CMakeLists.txt / build a separate library -
++        # we compile its single source file directly into lslobj instead (see
++        # TargetObjLib.cmake), so there's no extra library to install/export for static
++        # consumers to worry about. This subdir simply doesn't have a CMakeLists.txt.
++        SOURCE_SUBDIR "not-used-see-comment-above"
+     )
+     FetchContent_MakeAvailable(pugixml)
+-    set(BUILD_SHARED_LIBS ${_lsl_saved_build_shared_libs})
+-    unset(_lsl_saved_build_shared_libs)
+-    # Hide pugixml symbols - apply hidden visibility to the pugixml target
+-    set_target_properties(pugixml PROPERTIES
+-        CXX_VISIBILITY_PRESET hidden
+-        VISIBILITY_INLINES_HIDDEN ON
+-    )
++    set(LSL_PUGIXML_SOURCE "${pugixml_SOURCE_DIR}/src/pugixml.cpp")
++    set(LSL_PUGIXML_INCLUDE_DIR "${pugixml_SOURCE_DIR}/src")
+     set(LSL_PUGIXML_IS_FETCHED TRUE)
+ else()
+     message(STATUS "Using system pugixml")
+@@ -78,6 +70,8 @@ target_compile_definitions(lslboost INTERFACE BOOST_ALL_NO_LIB)
+ # hidden, which is correct since the dependencies are already resolved inside the shared lib.
+ set(lsllinklibs Threads::Threads)
+ 
++# Fetched pugixml has no library target - its source is compiled directly into lslobj, so
++# there's nothing to link here (see TargetObjLib.cmake).
+ if(NOT LSL_PUGIXML_IS_FETCHED)
+     if(TARGET pugixml::pugixml)
+         list(APPEND lsllinklibs pugixml::pugixml)
+diff --git a/cmake/TargetLib.cmake b/cmake/TargetLib.cmake
+index 45097421..372f59aa 100644
+--- a/cmake/TargetLib.cmake
++++ b/cmake/TargetLib.cmake
+@@ -25,11 +25,15 @@ if(LSL_FORCE_FANCY_LIBNAME)
+     )
+ endif()
+ 
+-# Link dependencies. The only dependency is lslobj, which contains the bulk of the library code and linkages.
+-# Note: We link PRIVATE because lslobj exposes extra symbols that are not part of the public API
+-#  but are used by the internal tests.
+-# Note: We use BUILD_INTERFACE to avoid requiring lslobj in the export set - the object library's
+-#  objects are linked directly into lsl, so consumers don't need lslobj.
++# Link lslobj and external dependencies. lslobj contains the bulk of the library code
++# and linkages.
++# Note: We link PRIVATE because lslobj exposes extra symbols that are not part of the
++# public API but are used by the internal tests.
++# Note: We use BUILD_INTERFACE to avoid requiring lslobj in the export set - the object
++# library's objects are linked directly into lsl, so consumers don't need lslobj.
++#
++# Also link external dependencies directly to lsl so they are included in the link
++# interface for static consumers.
+ target_link_libraries(lsl PRIVATE $<BUILD_INTERFACE:lslobj> ${lsllinklibs})
+ 
+ # Set the include directories for the lsl target.
+diff --git a/cmake/TargetObjLib.cmake b/cmake/TargetObjLib.cmake
+index 24720bd6..0151c1e2 100644
+--- a/cmake/TargetObjLib.cmake
++++ b/cmake/TargetObjLib.cmake
+@@ -76,14 +76,12 @@ if(NOT LSL_OPTIMIZATIONS)
+     target_compile_definitions(lslobj PUBLIC ASIO_SEPARATE_COMPILATION)
+ endif()
+ 
+-# - pugixml (either fetched via FetchContent or system package)
++# pugixml fetched sources are compiled directly into lslobj so its object code ends up
++# embedded in lsl itself, with no separate library to link/install/export (see
++# Dependencies.cmake). System pugixml is a normal link dependency, already part of
++# lsllinklibs above. Global CMAKE_CXX_VISIBILITY_PRESET (see CompilerSettings.cmake)
++# already keeps its symbols hidden from the shared library, same as the rest of lslobj.
+ if(LSL_PUGIXML_IS_FETCHED)
+-    # Fetched pugixml is always static - use BUILD_INTERFACE to avoid requiring
+-    # pugixml in the export set since the static library objects are linked
+-    # into lsl directly.
+-    target_link_libraries(lslobj PRIVATE $<BUILD_INTERFACE:pugixml::pugixml>)
+-    # Hide pugixml symbols from the shared library on Linux
+-    if(UNIX AND NOT APPLE)
+-        target_link_options(lslobj PRIVATE "LINKER:--exclude-libs,libpugixml.a")
+-    endif()
++    target_sources(lslobj PRIVATE ${LSL_PUGIXML_SOURCE})
++    target_include_directories(lslobj SYSTEM PUBLIC $<BUILD_INTERFACE:${LSL_PUGIXML_INCLUDE_DIR}>)
+ endif()
+-- 
+2.55.0.windows.2
+

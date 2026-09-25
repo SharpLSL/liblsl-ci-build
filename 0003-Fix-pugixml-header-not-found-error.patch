@@ -1,7 +1,7 @@
 From 679c6dd6744d15e5a5846b51c16a29c3fc4e3794 Mon Sep 17 00:00:00 2001
 From: myd7349 <myd7349@gmail.com>
 Date: Fri, 25 Sep 2026 23:02:48 +0800
-Subject: [PATCH 3/3] Fix pugixml header not found error
+Subject: [PATCH 3/4] Fix pugixml header not found error
 
 ---
  cmake/Dependencies.cmake |  2 ++

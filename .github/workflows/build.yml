@@ -64,7 +64,8 @@ jobs:
           git apply \
             "${GITHUB_WORKSPACE}/0001-Fix-transitive-dependencies-for-static-LSL-lsl.patch" \
             "${GITHUB_WORKSPACE}/0002-Don-t-export-Boost-as-a-dependency-of-LSL-lsl.patch" \
-            "${GITHUB_WORKSPACE}/0003-Fix-pugixml-header-not-found-error.patch"
+            "${GITHUB_WORKSPACE}/0003-Fix-pugixml-header-not-found-error.patch" \
+            "${GITHUB_WORKSPACE}/0004-Fix-for-fetched-pugixml-dependency.patch"
 
       - name: Install dependencies on Linux
         if: runner.os == 'Linux' && matrix.bundled_boost == 'OFF'
