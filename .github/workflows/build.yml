@@ -159,11 +159,17 @@ jobs:
           }
           Copy-Item -Path $pugixmlDll -Destination (Join-Path $env:GITHUB_WORKSPACE 'lslver-build') -Force
 
-      - name: Run lslver
-        shell: bash
+      - name: Run lslver on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          if [[ "${RUNNER_OS}" == "Windows" ]]; then
-            ./lslver-build/lslver.exe
-          else
-            ./lslver-build/lslver
-          fi
+          $lslver = Join-Path $env:GITHUB_WORKSPACE 'lslver-build\lslver.exe'
+          if (-not (Test-Path $lslver)) {
+            throw "lslver executable was not found: $lslver"
+          }
+          & $lslver
+
+      - name: Run lslver on Linux and macOS
+        if: runner.os != 'Windows'
+        shell: bash
+        run: ./lslver-build/lslver
