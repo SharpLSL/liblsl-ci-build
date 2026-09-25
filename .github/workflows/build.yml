@@ -71,7 +71,23 @@ jobs:
         if: runner.os == 'Windows' && (matrix.bundled_boost == 'OFF' || matrix.fetch_pugixml == 'OFF')
         shell: pwsh
         run: |
-          vcpkg install boost:x64-windows pugixml:x64-windows
+          $ports = @(
+            'boost-atomic:x64-windows'
+            'boost-bind:x64-windows'
+            'boost-chrono:x64-windows'
+            'boost-config:x64-windows'
+            'boost-endian:x64-windows'
+            'boost-functional:x64-windows'
+            'boost-integer:x64-windows'
+            'boost-lexical-cast:x64-windows'
+            'boost-math:x64-windows'
+            'boost-serialization:x64-windows'
+            'boost-smart-ptr:x64-windows'
+            'boost-thread:x64-windows'
+            'boost-uuid:x64-windows'
+            'pugixml:x64-windows'
+          )
+          vcpkg install @ports
           "VCPKG_TOOLCHAIN=-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Configure liblsl
