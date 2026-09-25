@@ -28,7 +28,7 @@ env:
 
 jobs:
   build-matrix:
-    name: verify-${{ matrix.os }}-${{ matrix.linkage }}-boost-${{ matrix.bundled_boost }}-pugixml-${{ matrix.fetch_pugixml }}
+    name: ${{ matrix.os }}-${{ matrix.linkage }}-BundledBoost(${{ matrix.bundled_boost }})-FetchPugixml(${{ matrix.fetch_pugixml }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
