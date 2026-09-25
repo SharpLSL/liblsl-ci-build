@@ -117,7 +117,8 @@ jobs:
       - name: Configure liblsl
         shell: bash
         run: |
-          cmake --debug-find -S liblsl -B liblsl-build -G "${CMAKE_GENERATOR:-Ninja}" \
+          cmake --debug-find-pkg=pugixml --debug-find-pkg=Boost \
+            -S liblsl -B liblsl-build -G "${CMAKE_GENERATOR:-Ninja}" \
             -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
             -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}/${INSTALL_PREFIX}" \
             -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/${INSTALL_PREFIX}" \
@@ -138,7 +139,8 @@ jobs:
       - name: Configure lslver
         shell: bash
         run: |
-          cmake --debug-find -S . -B lslver-build -G "${CMAKE_GENERATOR:-Ninja}" \
+          cmake --debug-find-pkg=pugixml --debug-find-pkg=Boost --debug-find-pkg=LSL \
+            -S . -B lslver-build -G "${CMAKE_GENERATOR:-Ninja}" \
             -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
             -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/${INSTALL_PREFIX}" \
             -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}/lslver-install" \
