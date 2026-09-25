@@ -4,8 +4,10 @@ project(lslver LANGUAGES C CXX)
 
 find_package(LSL CONFIG REQUIRED)
 
+add_executable(GetFullinfo GetFullinfo.cpp)
 add_executable(lslver lslver.c)
 
+target_link_libraries(GetFullinfo PRIVATE LSL::lsl)
 target_link_libraries(lslver PRIVATE LSL::lsl)
 
 get_target_property(LSL_TYPE LSL::lsl TYPE)
