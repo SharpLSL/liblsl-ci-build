@@ -58,21 +58,37 @@ jobs:
           git -C liblsl checkout "${LIBLSL_VERSION}"
 
       - name: Install dependencies on Linux
-        if: runner.os == 'Linux' && (matrix.bundled_boost == 'OFF' || matrix.fetch_pugixml == 'OFF')
+        if: runner.os == 'Linux' && matrix.bundled_boost == 'OFF'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libboost-all-dev libpugixml-dev
+          sudo apt-get install -y libboost-all-dev
           if [[ "${{ matrix.linkage }}" == "static" ]]; then
             echo "DEPENDENCY_LINKAGE=-DCMAKE_FIND_LIBRARY_SUFFIXES=.a" >> "$GITHUB_ENV"
           fi
 
       - name: Install dependencies on macOS
-        if: runner.os == 'macOS' && (matrix.bundled_boost == 'OFF' || matrix.fetch_pugixml == 'OFF')
+        if: runner.os == 'macOS' && matrix.bundled_boost == 'OFF'
         run: |
-          brew install boost pugixml
+          brew install boost
           if [[ "${{ matrix.linkage }}" == "static" ]]; then
             echo "DEPENDENCY_LINKAGE=-DCMAKE_FIND_LIBRARY_SUFFIXES=.a" >> "$GITHUB_ENV"
           fi
+
+      - name: Clone pugixml on Linux and macOS
+        if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.fetch_pugixml == 'OFF'
+        shell: bash
+        run: git clone --depth 1 https://github.com/zeux/pugixml.git
+
+      - name: Build and install pugixml on Linux and macOS
+        if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.fetch_pugixml == 'OFF'
+        shell: bash
+        run: |
+          cmake -S pugixml -B pugixml-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+            -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}/${INSTALL_PREFIX}" \
+            -DBUILD_SHARED_LIBS=${{ matrix.linkage == 'shared' && 'ON' || 'OFF' }} \
+            -DPUGIXML_BUILD_SHARED_AND_STATIC_LIBS=OFF
+          cmake --build pugixml-build --config ${BUILD_TYPE} --target install
 
       - name: Install dependencies on Windows
         if: runner.os == 'Windows' && (matrix.bundled_boost == 'OFF' || matrix.fetch_pugixml == 'OFF')
@@ -104,6 +120,7 @@ jobs:
           cmake -S liblsl -B liblsl-build -G "${CMAKE_GENERATOR:-Ninja}" \
             -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
             -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}/${INSTALL_PREFIX}" \
+            -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/${INSTALL_PREFIX}" \
             -DLSL_BUILD_STATIC=${{ matrix.linkage == 'static' && 'ON' || 'OFF' }} \
             -DLSL_FRAMEWORK=OFF \
             -DLSL_BUNDLED_BOOST=${{ matrix.bundled_boost }} \
