@@ -57,6 +57,14 @@ jobs:
           git clone https://github.com/sccn/liblsl.git
           git -C liblsl checkout "${LIBLSL_VERSION}"
 
+      - name: Apply liblsl patches
+        shell: bash
+        run: |
+          cd liblsl
+          git apply \
+            "${GITHUB_WORKSPACE}/0001-Fix-transitive-dependencies-for-static-LSL-lsl.patch" \
+            "${GITHUB_WORKSPACE}/0002-Don-t-export-Boost-as-a-dependency-of-LSL-lsl.patch"
+
       - name: Install dependencies on Linux
         if: runner.os == 'Linux' && matrix.bundled_boost == 'OFF'
         run: |

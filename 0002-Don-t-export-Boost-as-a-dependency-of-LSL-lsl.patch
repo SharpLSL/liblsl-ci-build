@@ -1,0 +1,49 @@
+From a16e9e4a68ed532e4d1fd8e4310eb12243fd209c Mon Sep 17 00:00:00 2001
+From: myd7349 <myd7349@gmail.com>
+Date: Mon, 21 Sep 2026 23:26:48 +0800
+Subject: [PATCH 2/2] Don't export Boost as a dependency of LSL::lsl
+
+Boost is only ever a header-only, PRIVATE compile-time dependency of
+lslobj (via the lslboost interface target), whether bundled or system-
+provided. Since lslobj is linked into lsl only through
+$<BUILD_INTERFACE:lslobj>, this dependency never reaches lsl's
+exported link interface, so it doesn't belong in lsllinklibs, and the
+installed LSLConfig.cmake doesn't need find_dependency(Boost) either.
+---
+ cmake/Dependencies.cmake | 4 ----
+ cmake/LSLConfig.cmake.in | 4 ----
+ 2 files changed, 8 deletions(-)
+
+diff --git a/cmake/Dependencies.cmake b/cmake/Dependencies.cmake
+index 125b5a9f..67a09467 100644
+--- a/cmake/Dependencies.cmake
++++ b/cmake/Dependencies.cmake
+@@ -89,10 +89,6 @@ if(NOT LSL_PUGIXML_IS_FETCHED)
+     endif()
+ endif()
+ 
+-if(NOT LSL_BUNDLED_BOOST)
+-    list(APPEND lsllinklibs Boost::boost Boost::disable_autolinking)
+-endif()
+-
+ if(MINGW)
+     list(APPEND lsllinklibs bcrypt)
+ endif()
+diff --git a/cmake/LSLConfig.cmake.in b/cmake/LSLConfig.cmake.in
+index 0a7bc0ba..e15477d8 100644
+--- a/cmake/LSLConfig.cmake.in
++++ b/cmake/LSLConfig.cmake.in
+@@ -4,10 +4,6 @@ include(CMakeFindDependencyMacro)
+ 
+ find_dependency(Threads)
+ 
+-if(NOT @LSL_BUNDLED_BOOST@)
+-    find_dependency(Boost)
+-endif()
+-
+ if(NOT @LSL_FETCH_PUGIXML@)
+     find_dependency(pugixml)
+ endif()
+-- 
+2.55.0.windows.2
+
