@@ -149,6 +149,16 @@ jobs:
         shell: bash
         run: cmake --build lslver-build --config ${BUILD_TYPE}
 
+      - name: Copy vcpkg pugixml DLL
+        if: runner.os == 'Windows' && matrix.linkage == 'shared' && matrix.fetch_pugixml == 'OFF'
+        shell: pwsh
+        run: |
+          $pugixmlDll = Join-Path $env:VCPKG_INSTALLATION_ROOT 'installed\x64-windows\bin\pugixml.dll'
+          if (-not (Test-Path $pugixmlDll)) {
+            throw "vcpkg pugixml DLL was not found: $pugixmlDll"
+          }
+          Copy-Item -Path $pugixmlDll -Destination (Join-Path $env:GITHUB_WORKSPACE 'lslver-build') -Force
+
       - name: Run lslver
         shell: bash
         run: |
