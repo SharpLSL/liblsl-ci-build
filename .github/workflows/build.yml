@@ -194,3 +194,7 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         run: ./lslver-build/lslver
+
+
+# References:
+# [find_package for a static library instead of a shared library](https://stackoverflow.com/questions/63435382/find-package-for-a-static-library-instead-of-a-shared-library)
