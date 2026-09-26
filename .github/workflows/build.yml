@@ -1,0 +1,186 @@
+# CMAKE_BUILD_TYPE=Release
+# CMAKE_INSTALL_PREFIX=install
+# LSL_BUILD_STATIC=ON/OFF
+# LSL_FRAMEWORK=OFF
+# LSL_BUNDLED_BOOST=ON/OFF
+# LSL_FETCH_PUGIXML=ON/OFF
+# LSL_TOOLS=ON
+# LSL_UNITTESTS=ON
+# LSL_INSTALL=ON
+
+name: liblsl
+
+on:
+  push:
+  pull_request:
+    types: [ opened, ready_for_review, reopened, synchronize ]
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BUILD_TYPE: Release
+  INSTALL_PREFIX: install
+  LIBLSL_VERSION: v1.18.0.b5
+
+jobs:
+  build-matrix:
+    name: ${{ matrix.os }}-${{ matrix.linkage }}-BundledBoost(${{ matrix.bundled_boost }})-FetchPugixml(${{ matrix.fetch_pugixml }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        linkage:
+          - static
+          - shared
+        bundled_boost:
+          - ON
+          - OFF
+        fetch_pugixml:
+          - ON
+          - OFF
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Clone liblsl
+        shell: bash
+        run: |
+          git clone https://github.com/sccn/liblsl.git
+          git -C liblsl checkout "${LIBLSL_VERSION}"
+
+      - name: Install dependencies on Linux
+        if: runner.os == 'Linux' && matrix.bundled_boost == 'OFF'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libboost-all-dev
+          if [[ "${{ matrix.linkage }}" == "static" ]]; then
+            echo "DEPENDENCY_LINKAGE=-DCMAKE_FIND_LIBRARY_SUFFIXES=.a" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install dependencies on macOS
+        if: runner.os == 'macOS' && matrix.bundled_boost == 'OFF'
+        run: |
+          brew install boost
+          if [[ "${{ matrix.linkage }}" == "static" ]]; then
+            echo "DEPENDENCY_LINKAGE=-DCMAKE_FIND_LIBRARY_SUFFIXES=.a" >> "$GITHUB_ENV"
+          fi
+
+      - name: Clone pugixml on Linux and macOS
+        if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.fetch_pugixml == 'OFF'
+        shell: bash
+        run: git clone --depth 1 https://github.com/zeux/pugixml.git
+
+      - name: Build and install pugixml on Linux and macOS
+        if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.fetch_pugixml == 'OFF'
+        shell: bash
+        run: |
+          cmake -S pugixml -B pugixml-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+            -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}/${INSTALL_PREFIX}" \
+            -DBUILD_SHARED_LIBS=${{ matrix.linkage == 'shared' && 'ON' || 'OFF' }} \
+            -DPUGIXML_BUILD_SHARED_AND_STATIC_LIBS=OFF
+          cmake --build pugixml-build --config ${BUILD_TYPE} --target install
+
+      - name: Install dependencies on Windows
+        if: runner.os == 'Windows' && (matrix.bundled_boost == 'OFF' || matrix.fetch_pugixml == 'OFF')
+        shell: pwsh
+        run: |
+          $triplet = if ('${{ matrix.linkage }}' -eq 'static') { 'x64-windows-static' } else { 'x64-windows' }
+          $ports = @(
+            "boost-atomic:$triplet"
+            "boost-bind:$triplet"
+            "boost-chrono:$triplet"
+            "boost-config:$triplet"
+            "boost-endian:$triplet"
+            "boost-functional:$triplet"
+            "boost-integer:$triplet"
+            "boost-lexical-cast:$triplet"
+            "boost-math:$triplet"
+            "boost-serialization:$triplet"
+            "boost-smart-ptr:$triplet"
+            "boost-thread:$triplet"
+            "boost-uuid:$triplet"
+            "pugixml:$triplet"
+          )
+          vcpkg install @ports
+          "VCPKG_TOOLCHAIN=-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=$triplet" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Configure Visual Studio generator on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          "CMAKE_GENERATOR=Visual Studio 18 2026" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CMAKE_GENERATOR_PLATFORM=x64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Configure liblsl
+        shell: bash
+        run: |
+          cmake --debug-find-pkg=pugixml --debug-find-pkg=Boost \
+            -S liblsl -B liblsl-build -G "${CMAKE_GENERATOR:-Ninja}" \
+            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+            -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}/${INSTALL_PREFIX}" \
+            -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/${INSTALL_PREFIX}" \
+            -DLSL_BUILD_STATIC=${{ matrix.linkage == 'static' && 'ON' || 'OFF' }} \
+            -DLSL_FRAMEWORK=OFF \
+            -DLSL_BUNDLED_BOOST=${{ matrix.bundled_boost }} \
+            -DLSL_FETCH_PUGIXML=${{ matrix.fetch_pugixml }} \
+            -DLSL_TOOLS=ON \
+            -DLSL_UNITTESTS=ON \
+            -DLSL_INSTALL=ON \
+            ${{ runner.os == 'Windows' && matrix.linkage == 'static' && '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded' || '' }} \
+            ${DEPENDENCY_LINKAGE} \
+            ${VCPKG_TOOLCHAIN}
+
+      - name: Build and install liblsl
+        shell: bash
+        run: cmake --build liblsl-build --config ${BUILD_TYPE} --target install
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake --debug-find-pkg=pugixml --debug-find-pkg=Boost --debug-find-pkg=LSL \
+            -S . -B lslver-build -G "${CMAKE_GENERATOR:-Ninja}" \
+            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+            -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/${INSTALL_PREFIX}" \
+            -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}/lslver-install" \
+            ${{ runner.os == 'Windows' && matrix.linkage == 'static' && '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded' || '' }} \
+            ${DEPENDENCY_LINKAGE} \
+            ${VCPKG_TOOLCHAIN}
+
+      - name: Build
+        shell: bash
+        run: cmake --build lslver-build --config ${BUILD_TYPE} -v
+
+      - name: Copy vcpkg pugixml DLL
+        if: runner.os == 'Windows' && matrix.linkage == 'shared' && matrix.fetch_pugixml == 'OFF'
+        shell: pwsh
+        run: |
+          $pugixmlDll = Join-Path $env:VCPKG_INSTALLATION_ROOT 'installed\x64-windows\bin\pugixml.dll'
+          if (-not (Test-Path $pugixmlDll)) {
+            throw "vcpkg pugixml DLL was not found: $pugixmlDll"
+          }
+          Copy-Item -Path $pugixmlDll -Destination (Join-Path $env:GITHUB_WORKSPACE 'lslver-build\Release') -Force
+
+      - name: Run lslver on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $lslver = Join-Path $env:GITHUB_WORKSPACE 'lslver-build\Release\lslver.exe'
+          if (-not (Test-Path $lslver)) {
+            throw "lslver executable was not found: $lslver"
+          }
+          & $lslver
+
+      - name: Run lslver on Linux and macOS
+        if: runner.os != 'Windows'
+        shell: bash
+        run: ./lslver-build/lslver
