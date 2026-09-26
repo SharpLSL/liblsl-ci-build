@@ -1,0 +1,211 @@
+From 681df5cbe53fa81c668ce76e0186f4b57375fa06 Mon Sep 17 00:00:00 2001
+From: myd7349 <myd7349@gmail.com>
+Date: Mon, 21 Sep 2026 00:04:51 +0800
+Subject: [PATCH] Fix transitive dependencies for static LSL::lsl
+
+Static builds of lsl did not forward its transitive dependencies
+(Threads, Windows iphlpapi/winmm/mswsock/ws2_32, Linux rt/dl, system
+pugixml) because they were linked PRIVATE via the lslobj object
+library. Consumers linking LSL::lsl therefore had to manually add
+these transitive dependencies themselves.
+---
+ cmake/Dependencies.cmake | 47 +++++++++++++++++++++++++++++++++++-----
+ cmake/Installation.cmake | 22 ++++++++++++-------
+ cmake/LSLConfig.cmake.in | 13 +++++++++++
+ cmake/TargetLib.cmake    |  7 ++++--
+ cmake/TargetObjLib.cmake | 21 +-----------------
+ 5 files changed, 74 insertions(+), 36 deletions(-)
+ create mode 100644 cmake/LSLConfig.cmake.in
+
+diff --git a/cmake/Dependencies.cmake b/cmake/Dependencies.cmake
+index 223cfe11..42a0fc9f 100644
+--- a/cmake/Dependencies.cmake
++++ b/cmake/Dependencies.cmake
+@@ -26,9 +26,6 @@ if(LSL_FETCH_PUGIXML)
+     FetchContent_MakeAvailable(pugixml)
+     set(BUILD_SHARED_LIBS ${_lsl_saved_build_shared_libs})
+     unset(_lsl_saved_build_shared_libs)
+-    if(TARGET pugixml AND NOT TARGET pugixml::pugixml)
+-        add_library(pugixml::pugixml ALIAS pugixml)
+-    endif()
+     # Hide pugixml symbols - apply hidden visibility to the pugixml target
+     set_target_properties(pugixml PROPERTIES
+         CXX_VISIBILITY_PRESET hidden
+@@ -50,9 +47,6 @@ else()
+         unset(_lsl_arch_count)
+     endif()
+     find_package(pugixml REQUIRED)
+-    if(NOT TARGET pugixml::pugixml)
+-        add_library(pugixml::pugixml ALIAS pugixml)
+-    endif()
+     set(LSL_PUGIXML_IS_FETCHED FALSE)
+ endif()
+ 
+@@ -73,3 +67,44 @@ else()
+     target_link_libraries(lslboost INTERFACE Boost::boost Boost::disable_autolinking)
+ endif()
+ target_compile_definitions(lslboost INTERFACE BOOST_ALL_NO_LIB)
++
++# Single source of truth for every external (system/third-party) library lsl needs to link
++# against. lslobj (which internal tests also link directly) and the real lsl target both
++# link this same list, so it only has to be kept up to date in one place. Having lsl itself
++# link these directly (not only indirectly via lslobj) matters for static builds: CMake
++# records a STATIC library's PRIVATE link dependencies as $<LINK_ONLY:...> entries in its
++# exported INTERFACE_LINK_LIBRARIES, so consumers linking the installed LSL::lsl get them
++# transitively instead of having to add them by hand. For shared builds these stay private/
++# hidden, which is correct since the dependencies are already resolved inside the shared lib.
++set(lsllinklibs Threads::Threads)
++
++if(NOT LSL_PUGIXML_IS_FETCHED)
++    if(TARGET pugixml::pugixml)
++        list(APPEND lsllinklibs pugixml::pugixml)
++    elseif(TARGET pugixml)
++        # For pugixml versions before 1.11
++        list(APPEND lsllinklibs pugixml)
++        # Add an alias for testing/CMakeLists.txt
++        add_library(pugixml::pugixml ALIAS pugixml)
++    else()
++        message(FATAL_ERROR "pugixml library target not found!")
++    endif()
++endif()
++
++if(MINGW)
++    list(APPEND lsllinklibs bcrypt)
++endif()
++
++if(UNIX AND NOT APPLE)
++    # check that clock_gettime is present in the stdlib, link against librt otherwise
++    include(CheckSymbolExists)
++    check_symbol_exists(clock_gettime time.h HAS_GETTIME)
++    if(NOT HAS_GETTIME)
++        list(APPEND lsllinklibs rt)
++    endif()
++    if(LSL_DEBUGLOG)
++        list(APPEND lsllinklibs dl)
++    endif()
++elseif(WIN32)
++    list(APPEND lsllinklibs iphlpapi winmm mswsock ws2_32)
++endif()
+diff --git a/cmake/Installation.cmake b/cmake/Installation.cmake
+index 19e57233..51710f56 100644
+--- a/cmake/Installation.cmake
++++ b/cmake/Installation.cmake
+@@ -61,23 +61,29 @@ install(TARGETS ${LSLTargets}
+ install(DIRECTORY include/lsl DESTINATION ${LSL_INSTALL_INCLUDEDIR})
+ install(FILES include/lsl_c.h include/lsl_cpp.h DESTINATION ${LSL_INSTALL_INCLUDEDIR})
+ 
+-# Generate the LSLConfig.cmake file and mark it for installation
++# Export the targets to a separate LSLTargets.cmake file, included by the
++# LSLConfig.cmake below.
+ install(EXPORT LSLTargets
+-        FILE LSLConfig.cmake
++        FILE LSLTargets.cmake
+         COMPONENT liblsl
+         NAMESPACE "LSL::"
+         DESTINATION ${LSL_CONFIG_INSTALL_DIR}
+ )
+-# A common alternative to installing the exported package config file is to generate it from a template.
+-#configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/lslConfig.cmake.in
+-#        ${CMAKE_CURRENT_BINARY_DIR}/LSLConfig.cmake
+-#        INSTALL_DESTINATION ${LSL_CONFIG_INSTALL_DIR})
+-# If we use this method, then we need a corresponding install(FILES ...) command to install the generated file.
+ 
+-# Install the version file and the helper CMake script.
++# Generate LSLConfig.cmake from a template so it can call find_dependency() for
++# the transitive dependencies that a static LSL::lsl requires its consumers to
++# link against.
++configure_package_config_file(
++        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/LSLConfig.cmake.in
++        ${CMAKE_CURRENT_BINARY_DIR}/LSLConfig.cmake
++        INSTALL_DESTINATION ${LSL_CONFIG_INSTALL_DIR}
++)
++
++# Install the version file, generated config file, and the helper CMake script.
+ install(
+     FILES
+         cmake/LSLCMake.cmake
++        ${CMAKE_CURRENT_BINARY_DIR}/LSLConfig.cmake
+         ${CMAKE_CURRENT_BINARY_DIR}/LSLConfigVersion.cmake
+     COMPONENT liblsl
+     DESTINATION ${LSL_CONFIG_INSTALL_DIR}
+diff --git a/cmake/LSLConfig.cmake.in b/cmake/LSLConfig.cmake.in
+new file mode 100644
+index 00000000..e15477d8
+--- /dev/null
++++ b/cmake/LSLConfig.cmake.in
+@@ -0,0 +1,13 @@
++@PACKAGE_INIT@
++
++include(CMakeFindDependencyMacro)
++
++find_dependency(Threads)
++
++if(NOT @LSL_FETCH_PUGIXML@)
++    find_dependency(pugixml)
++endif()
++
++include("${CMAKE_CURRENT_LIST_DIR}/LSLTargets.cmake")
++
++check_required_components(LSL)
+diff --git a/cmake/TargetLib.cmake b/cmake/TargetLib.cmake
+index 89606b6e..2a7830a5 100644
+--- a/cmake/TargetLib.cmake
++++ b/cmake/TargetLib.cmake
+@@ -25,12 +25,15 @@ if(LSL_FORCE_FANCY_LIBNAME)
+     )
+ endif()
+ 
+-# Link dependencies. The only dependency is lslobj, which contains the bulk of the library code and linkages.
++# Link lslobj, which contains the bulk of the library code and linkages, and external dependencies.
+ # Note: We link PRIVATE because lslobj exposes extra symbols that are not part of the public API
+ #  but are used by the internal tests.
+ # Note: We use BUILD_INTERFACE to avoid requiring lslobj in the export set - the object library's
+ #  objects are linked directly into lsl, so consumers don't need lslobj.
+-target_link_libraries(lsl PRIVATE $<BUILD_INTERFACE:lslobj>)
++#
++# Also link external dependencies directly to lsl so they are included in the link
++# interface for static consumers.
++target_link_libraries(lsl PRIVATE $<BUILD_INTERFACE:lslobj> ${lsllinklibs})
+ 
+ # Set the include directories for the lsl target.
+ # Note: We had to link lslobj as a PRIVATE dependency, therefore we must manually expose the include directories
+diff --git a/cmake/TargetObjLib.cmake b/cmake/TargetObjLib.cmake
+index 8c1f6afb..24720bd6 100644
+--- a/cmake/TargetObjLib.cmake
++++ b/cmake/TargetObjLib.cmake
+@@ -29,23 +29,7 @@ target_include_directories(lslobj
+ 
+ # Link system libs
+ # (boost might be bundled or system)
+-target_link_libraries(lslobj PRIVATE lslboost Threads::Threads)
+-if(MINGW)
+-    target_link_libraries(lslobj PRIVATE bcrypt)
+-endif()
+-if(UNIX AND NOT APPLE)
+-    # check that clock_gettime is present in the stdlib, link against librt otherwise
+-    include(CheckSymbolExists)
+-    check_symbol_exists(clock_gettime time.h HAS_GETTIME)
+-    if(NOT HAS_GETTIME)
+-        target_link_libraries(lslobj PRIVATE rt)
+-    endif()
+-    if(LSL_DEBUGLOG)
+-        target_link_libraries(lslobj PRIVATE dl)
+-    endif()
+-elseif(WIN32)
+-    target_link_libraries(lslobj PRIVATE iphlpapi winmm mswsock ws2_32)
+-endif()
++target_link_libraries(lslobj PRIVATE lslboost ${lsllinklibs})
+ 
+ # Compiler settings
+ target_compile_definitions(lslobj
+@@ -102,7 +86,4 @@ if(LSL_PUGIXML_IS_FETCHED)
+     if(UNIX AND NOT APPLE)
+         target_link_options(lslobj PRIVATE "LINKER:--exclude-libs,libpugixml.a")
+     endif()
+-else()
+-    # System pugixml may be shared or static
+-    target_link_libraries(lslobj PRIVATE pugixml::pugixml)
+ endif()
+-- 
+2.55.0.windows.2
+
