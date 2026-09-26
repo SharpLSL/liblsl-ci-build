@@ -62,7 +62,8 @@ jobs:
         run: |
           cd liblsl
           git apply \
-            "${GITHUB_WORKSPACE}/0001-Fix-transitive-dependencies-for-static-LSL-lsl.patch"
+            "${GITHUB_WORKSPACE}/0001-Fix-transitive-dependencies-for-static-LSL-lsl.patch" \
+            "${GITHUB_WORKSPACE}/0002-Compile-fetched-pugixml-directly-into-lslobj.patch"
 
       - name: Install dependencies on Linux
         if: runner.os == 'Linux' && matrix.bundled_boost == 'OFF'
