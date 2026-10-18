@@ -39,14 +39,13 @@ Supported platforms:
 ### Windows
 
 - win-arm64
-- win-arm64-mt
+- win-arm64-md
 - win-x64
-- win-x64-mt
+- win-x64-md
 - win-x86
-- win-x86-mt
+- win-x86-md
 
-If it does not include the `-mt` suffix, use the multithreaded, DLL-specific version of the runtime library.
- If it does include `-mt`, use the multithreaded, static version of the runtime library.
+RID without a suffix uses the `/MT` multithreaded, static runtime library. The `-md` suffix identifies builds using `/MD`, the multithreaded DLL-specific runtime library.
 
 For more information on the differences between `/MD` and `/MT`, refer to the official documentation: [/MD, /MT, /LD (Use runtime library)](https://learn.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=msvc-170).
 

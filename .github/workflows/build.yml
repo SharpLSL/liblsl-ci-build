@@ -391,32 +391,32 @@ jobs:
       matrix:
         include:
           - os: windows-11-arm
-            rid: win-arm64
+            rid: win-arm64-md
             arch: ARM64
             crt: MD
 
           - os: windows-11-arm
-            rid: win-arm64-mt
+            rid: win-arm64
             arch: ARM64
             crt: MT
 
           - os: windows-latest
-            rid: win-x64
+            rid: win-x64-md
             arch: x64
             crt: MD
 
           - os: windows-latest
-            rid: win-x64-mt
+            rid: win-x64
             arch: x64
             crt: MT
 
           - os: windows-latest
-            rid: win-x86
+            rid: win-x86-md
             arch: Win32
             crt: MD
 
           - os: windows-latest
-            rid: win-x86-mt
+            rid: win-x86
             arch: Win32
             crt: MT
 
@@ -504,12 +504,12 @@ jobs:
           7z a liblsl-${{ env.LIBLSL_VERSION }}-osx-dynamic.zip ./liblsl-${{ env.LIBLSL_VERSION }}-osx/*
           7z a liblsl-${{ env.LIBLSL_VERSION }}-osx-arm64-dynamic.zip ./liblsl-${{ env.LIBLSL_VERSION }}-osx-arm64/*
           7z a liblsl-${{ env.LIBLSL_VERSION }}-osx-x64-dynamic.zip ./liblsl-${{ env.LIBLSL_VERSION }}-osx-x64/*
+          7z a liblsl-${{ env.LIBLSL_VERSION }}-win-arm64-md-dynamic.zip ./liblsl-${{ env.LIBLSL_VERSION }}-win-arm64-md/*
           7z a liblsl-${{ env.LIBLSL_VERSION }}-win-arm64-dynamic.zip ./liblsl-${{ env.LIBLSL_VERSION }}-win-arm64/*
-          7z a liblsl-${{ env.LIBLSL_VERSION }}-win-arm64-dynamic-mt.zip ./liblsl-${{ env.LIBLSL_VERSION }}-win-arm64-mt/*
+          7z a liblsl-${{ env.LIBLSL_VERSION }}-win-x64-md-dynamic.zip ./liblsl-${{ env.LIBLSL_VERSION }}-win-x64-md/*
           7z a liblsl-${{ env.LIBLSL_VERSION }}-win-x64-dynamic.zip ./liblsl-${{ env.LIBLSL_VERSION }}-win-x64/*
-          7z a liblsl-${{ env.LIBLSL_VERSION }}-win-x64-mt-dynamic.zip ./liblsl-${{ env.LIBLSL_VERSION }}-win-x64-mt/*
+          7z a liblsl-${{ env.LIBLSL_VERSION }}-win-x86-md-dynamic.zip ./liblsl-${{ env.LIBLSL_VERSION }}-win-x86-md/*
           7z a liblsl-${{ env.LIBLSL_VERSION }}-win-x86-dynamic.zip ./liblsl-${{ env.LIBLSL_VERSION }}-win-x86/*
-          7z a liblsl-${{ env.LIBLSL_VERSION }}-win-x86-mt-dynamic.zip ./liblsl-${{ env.LIBLSL_VERSION }}-win-x86-mt/*
 
       - name: Release
         uses: softprops/action-gh-release@v3.0.3
