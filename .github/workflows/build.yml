@@ -132,7 +132,7 @@ jobs:
           -S liblsl
           -B build
           -G Ninja
-          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/liblsl/cmake/ios.toolchain.cmake
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/toolchains/ios-cmake/ios.toolchain.cmake
           -DPLATFORM=${{ matrix.os }}
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }}
@@ -400,22 +400,22 @@ jobs:
             arch: ARM64
             crt: MT
 
-          - os: windows-2022
+          - os: windows-latest
             rid: win-x64
             arch: x64
             crt: MD
 
-          - os: windows-2022
+          - os: windows-latest
             rid: win-x64-mt
             arch: x64
             crt: MT
 
-          - os: windows-2022
+          - os: windows-latest
             rid: win-x86
             arch: Win32
             crt: MD
 
-          - os: windows-2022
+          - os: windows-latest
             rid: win-x86-mt
             arch: Win32
             crt: MT
@@ -446,7 +446,7 @@ jobs:
           cmake
           -S liblsl
           -B build
-          -G "Visual Studio 17 2022"
+          -G "Visual Studio 18 2026"
           -A ${{ matrix.arch }}
           -DLSL_BUILD_STATIC=OFF
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }}
